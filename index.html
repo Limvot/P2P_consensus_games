@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>P2P</title>
+		<style>
+h1, h2 ,h3 { line-height:1.2; }
+body {
+	max-width: 45em;
+	margin: 1em auto;
+	padding: 0 .62em;
+	font: 1.2em/1.62 sans-serif;
+}
+		</style>
+	</head>
+	<body>
+		hi 2
+<script>
+	const configuration = {iceServers: [{urls: 'stun:stun.l.google.com:19302'}]};
+	/*
+	const pc = new RTCPeerConnection(configuration);
+	pc.onicecandidate = ({candidate}) => signaling.send({candidate});
+	pc.onnegotiationneeded = async () => {
+		try {
+			await pc.setLocalDescription();
+			signaling.send({description: pc.localDescription});
+		} catch (err) {
+			console.log(err);
+		}
+	};
+
+	signaling.onmessage = async ({data: {description, candidate}}) => {
+		try {
+			if (description) {
+				await pc.setRemoteDescription(description);
+				if (description.type == 'offer') {
+					await pc.setLocalDescription();
+					signaling.send({description: pc.localDescription});
+				}
+			} else if (candidate) {
+				await pc.addIceCandidate(candidate);
+			}
+		} catch (err) {
+			console.log(err);
+		}
+	};
+
+	const sendChannel = pc.createDataChannel('go');
+
+	remoteConnection.ondatachannel = (event) => {
+		recieveChannel = event.channel;
+		recieveChannel.onmessage = (event) => {
+			console.log("got message");
+			console.log(event.data);
+		}
+	};
+	*/
+	const pc1 = new RTCPeerConnection(configuration);
+	const pc2 = new RTCPeerConnection(configuration);
+	pc1.onicecandidate = async ({candidate}) => {
+		console.log("got a pc1 candidate: ", candidate)
+		await pc2.addIceCandidate(candidate);
+	}
+	pc2.onicecandidate = async ({candidate}) => {
+		console.log("got a pc2 candidate: ", candidate)
+		await pc1.addIceCandidate(candidate);
+	}
+	pc1.onnegotiationneeded = async () => {
+		try {
+			await pc1.setLocalDescription();
+			console.log("pc1.localDescription: ", pc1.localDescription)
+			await pc2.setRemoteDescription(pc1.localDescription);
+			if (pc1.localDescription.type == 'offer') {
+				await pc2.setLocalDescription();
+				console.log("pc2.localDescription: ", pc2.localDescription)
+				await pc1.setRemoteDescription(pc2.localDescription);
+			}
+		} catch (err) {
+			console.log(err);
+		}
+	};
+
+	pc2.ondatachannel = (event) => {
+		let recieveChannel = event.channel;
+		recieveChannel.onmessage = (event) => {
+			console.log("got message: ", event.data);
+		}
+	};
+
+	let sendChannel = pc1.createDataChannel('go');
+	function onSendChannelChange() {
+		if (sendChannel.readyState == 'open') {
+			console.log("channel open!")
+			sendChannel.send("GO FOR IT PELASE");
+		} else {
+			console.log("channel closed!")
+		}
+	}
+	sendChannel.onopen = onSendChannelChange;
+	sendChannel.onclose = onSendChannelChange;
+	console.log("hope that worked");
+
+</script>
+	</body>
+</html>
